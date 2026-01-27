@@ -12,3 +12,4 @@ A production-style ML inference system that monitors real-time latency and evalu
 - Day 1: Train large and small models with latency measurement
 - Day 2: FastAPI inference service
 - Day 3: Rolling latency monitor and SLA evaluation
+Daily progress test
