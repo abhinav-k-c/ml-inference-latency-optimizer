@@ -5,53 +5,26 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from inference.latency import LatencyMonitor
+from inference.router import ModelRouter
 
-
-# -----------------------------
-# Load models once at startup
-# -----------------------------
+# Load models
 large_model = joblib.load("models/large_model.joblib")
 small_model = joblib.load("models/small_model.joblib")
 
+latency_monitor = LatencyMonitor(window_size=50, sla_ms=10)
+router = ModelRouter(latency_monitor)
 
-# -----------------------------
-# Latency monitor + metrics
-# -----------------------------
-latency_monitor = LatencyMonitor(window_size=50, sla_ms=50)
-
-metrics = {
-    "total_requests": 0,
-    "sla_violations": 0,
-    "last_model_used": None
-}
-
-
-# -----------------------------
-# FastAPI app
-# -----------------------------
-app = FastAPI(title="ML Inference Latency Optimizer")
-
+app = FastAPI()
 
 class InputData(BaseModel):
     features: list
 
-
 @app.post("/predict")
 def predict(data: InputData):
-    metrics["total_requests"] += 1
-
     features = np.array(data.features).reshape(1, -1)
 
-    # Dynamic model selection
-    if latency_monitor.sla_violated():
-        model = small_model
-        model_name = "small"
-        metrics["sla_violations"] += 1
-    else:
-        model = large_model
-        model_name = "large"
-
-    metrics["last_model_used"] = model_name
+    model_choice = router.choose_model()
+    model = large_model if model_choice == "large" else small_model
 
     start = time.time()
     prediction = model.predict(features)[0]
@@ -65,19 +38,15 @@ def predict(data: InputData):
         "avg_latency_ms": round(latency_monitor.avg_latency(), 2),
         "p95_latency_ms": round(latency_monitor.p95_latency(), 2),
         "sla_violated": latency_monitor.sla_violated(),
-        "model_used": model_name
+        "model_used": model_choice
     }
 
-
-# -----------------------------
-# Metrics endpoint (Day 5)
-# -----------------------------
 @app.get("/metrics")
-def get_metrics():
+def metrics():
     return {
-        "total_requests": metrics["total_requests"],
-        "sla_violations": metrics["sla_violations"],
+        "total_requests": latency_monitor.total_requests,
+        "sla_violations": latency_monitor.sla_violations,
         "avg_latency_ms": round(latency_monitor.avg_latency(), 2),
         "p95_latency_ms": round(latency_monitor.p95_latency(), 2),
-        "last_model_used": metrics["last_model_used"]
+        "last_model_used": router.last_model
     }
