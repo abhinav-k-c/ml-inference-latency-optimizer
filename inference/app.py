@@ -15,12 +15,15 @@ small_model = joblib.load("models/small_model.joblib")
 
 
 # -----------------------------
-# Latency monitor with SLA
+# Latency monitor + metrics
 # -----------------------------
-latency_monitor = LatencyMonitor(
-    window_size=50,   # rolling window
-    sla_ms=50         # SLA threshold in ms
-)
+latency_monitor = LatencyMonitor(window_size=50, sla_ms=50)
+
+metrics = {
+    "total_requests": 0,
+    "sla_violations": 0,
+    "last_model_used": None
+}
 
 
 # -----------------------------
@@ -35,32 +38,27 @@ class InputData(BaseModel):
 
 @app.post("/predict")
 def predict(data: InputData):
-    # Prepare input
+    metrics["total_requests"] += 1
+
     features = np.array(data.features).reshape(1, -1)
 
-    # -----------------------------
     # Dynamic model selection
-    # -----------------------------
     if latency_monitor.sla_violated():
         model = small_model
         model_name = "small"
+        metrics["sla_violations"] += 1
     else:
         model = large_model
         model_name = "large"
 
-    # -----------------------------
-    # Inference + latency tracking
-    # -----------------------------
+    metrics["last_model_used"] = model_name
+
     start = time.time()
     prediction = model.predict(features)[0]
     latency_ms = (time.time() - start) * 1000
 
-    # Record latency AFTER inference
     latency_monitor.record(latency_ms)
 
-    # -----------------------------
-    # Response
-    # -----------------------------
     return {
         "prediction": int(prediction),
         "latency_ms": round(latency_ms, 2),
@@ -68,4 +66,18 @@ def predict(data: InputData):
         "p95_latency_ms": round(latency_monitor.p95_latency(), 2),
         "sla_violated": latency_monitor.sla_violated(),
         "model_used": model_name
+    }
+
+
+# -----------------------------
+# Metrics endpoint (Day 5)
+# -----------------------------
+@app.get("/metrics")
+def get_metrics():
+    return {
+        "total_requests": metrics["total_requests"],
+        "sla_violations": metrics["sla_violations"],
+        "avg_latency_ms": round(latency_monitor.avg_latency(), 2),
+        "p95_latency_ms": round(latency_monitor.p95_latency(), 2),
+        "last_model_used": metrics["last_model_used"]
     }
