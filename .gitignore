@@ -1,4 +1,15 @@
-venv/
+# Python
 __pycache__/
-*.joblib
+*.pyc
+
+# Virtual environments
+venv/
+venv311/
 .env
+
+# OS
+.DS_Store
+
+# Models / artifacts (optional)
+*.joblib
+*.pth
