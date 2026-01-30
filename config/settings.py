@@ -1,0 +1,6 @@
+# config/settings.py
+
+SLA_MS = 10
+LATENCY_WINDOW = 50
+SIMULATED_LARGE_MODEL_DELAY_MS = 20
+
