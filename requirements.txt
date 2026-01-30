@@ -5,3 +5,5 @@ scikit-learn==1.8.0
 scipy==1.11.4
 joblib==1.5.3
 requests==2.32.3
+prometheus-client==0.20.0
+torch==2.2.2
