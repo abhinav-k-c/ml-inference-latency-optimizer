@@ -6,16 +6,21 @@ import torch
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
 
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import (
+    Counter,
+    Histogram,
+    generate_latest,
+    CONTENT_TYPE_LATEST
+)
 
 from inference.latency import LatencyMonitor
 from inference.router import ModelRouter
 from models.torch_model import RiskNet
 
 
-# ======================
-# Load models (startup)
-# ======================
+# =========================================================
+# Model Loading (runs once at startup)
+# =========================================================
 
 # Sklearn models
 large_sklearn = joblib.load("models/large_model.joblib")
@@ -26,21 +31,21 @@ torch_model = RiskNet(input_dim=30)
 torch_model.eval()
 
 
-# ======================
-# Monitoring + Routing
-# ======================
+# =========================================================
+# Latency Monitoring & Routing
+# =========================================================
 
 latency_monitor = LatencyMonitor(
     window_size=50,
-    sla_ms=10   # strict SLA to force routing under load
+    sla_ms=10  # strict SLA to force routing under load
 )
 
 router = ModelRouter(latency_monitor)
 
 
-# ======================
+# =========================================================
 # Prometheus Metrics
-# ======================
+# =========================================================
 
 REQUEST_COUNT = Counter(
     "inference_requests_total",
@@ -59,20 +64,20 @@ INFERENCE_LATENCY = Histogram(
 )
 
 
-# ======================
+# =========================================================
 # FastAPI App
-# ======================
+# =========================================================
 
-app = FastAPI()
+app = FastAPI(title="Latency-Aware Inference Service")
 
 
 class InputData(BaseModel):
-    features: list
+    features: list[float]
 
 
-# ======================
+# =========================================================
 # Prediction Endpoint
-# ======================
+# =========================================================
 
 @app.post("/predict")
 def predict(data: InputData):
@@ -85,8 +90,8 @@ def predict(data: InputData):
     start = time.time()
 
     if model_choice == "large":
-        # 🔴 Artificial delay to simulate heavy deep model
-        time.sleep(0.02)  # 20 ms
+        # Simulate expensive deep model latency
+        time.sleep(0.02)  # 20ms artificial delay
 
         with torch.no_grad():
             x = torch.tensor(features, dtype=torch.float32)
@@ -113,9 +118,9 @@ def predict(data: InputData):
     }
 
 
-# ======================
+# =========================================================
 # Prometheus Metrics Endpoint
-# ======================
+# =========================================================
 
 @app.get("/metrics_prom")
 def prometheus_metrics():

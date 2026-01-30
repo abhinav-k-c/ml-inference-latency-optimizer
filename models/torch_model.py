@@ -2,12 +2,14 @@ import torch
 import torch.nn as nn
 
 class RiskNet(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, input_dim=30):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1),
             nn.Sigmoid()
         )
 

@@ -1,0 +1,8 @@
+models:
+  sklearn_large: "models/large_model.joblib"
+  sklearn_small: "models/small_model.joblib"
+  torch_arch: "models/torch_model.py"
+
+routing:
+  sla_ms: 10
+  window_size: 50
