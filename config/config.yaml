@@ -2,7 +2,7 @@ models:
   large:
     type: torch
     path: models/torch_model.py
-    artificial_delay_ms: 20   
+    artificial_delay_ms: 20
 
   small:
     type: sklearn

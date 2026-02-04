@@ -20,7 +20,7 @@ from utils.config_loader import load_config
 
 
 # ======================
-# Load config
+# Load config (dict)
 # ======================
 
 config = load_config()
@@ -35,14 +35,16 @@ MODEL_CONFIG = config["models"]
 # Load models (startup)
 # ======================
 
-# Sklearn models
+# Small / fast model
 small_model = joblib.load(MODEL_CONFIG["small"]["path"])
 
-# Torch model (architecture only, simulated heavy inference)
+# Large / slow model (architecture only)
 torch_model = RiskNet(input_dim=30)
 torch_model.eval()
 
-ARTIFICIAL_DELAY_MS = MODEL_CONFIG["large"].get("artificial_delay_ms", 0)
+ARTIFICIAL_DELAY_MS = MODEL_CONFIG["large"].get(
+    "artificial_delay_ms", 0
+)
 
 
 # ======================
