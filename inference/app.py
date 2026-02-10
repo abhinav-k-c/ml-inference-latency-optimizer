@@ -20,31 +20,28 @@ from utils.config_loader import load_config
 
 
 # ======================
-# Load config (dict)
+# Load + validate config
 # ======================
 
 config = load_config()
 
-SLA_MS = config["routing"]["sla_ms"]
-WINDOW_SIZE = config["routing"]["window_size"]
-
-MODEL_CONFIG = config["models"]
+SLA_MS = config.routing.sla_ms
+WINDOW_SIZE = config.routing.window_size
+MODEL_CONFIG = config.models
 
 
 # ======================
 # Load models (startup)
 # ======================
 
-# Small / fast model
-small_model = joblib.load(MODEL_CONFIG["small"]["path"])
+# Small sklearn model
+small_model = joblib.load(MODEL_CONFIG.small.path)
 
-# Large / slow model (architecture only)
+# Large torch model (architecture only, simulated latency)
 torch_model = RiskNet(input_dim=30)
 torch_model.eval()
 
-ARTIFICIAL_DELAY_MS = MODEL_CONFIG["large"].get(
-    "artificial_delay_ms", 0
-)
+ARTIFICIAL_DELAY_MS = MODEL_CONFIG.large.artificial_delay_ms or 0
 
 
 # ======================
@@ -88,7 +85,7 @@ app = FastAPI(title="SLA-Aware ML Inference Service")
 
 
 class InputData(BaseModel):
-    features: list
+    features: list[float]
 
 
 # ======================
@@ -122,7 +119,8 @@ def predict(data: InputData):
     INFERENCE_LATENCY.observe(latency_ms)
     latency_monitor.record(latency_ms)
 
-    if latency_monitor.sla_violated():
+    sla_breached = latency_monitor.sla_violated()
+    if sla_breached:
         SLA_VIOLATIONS.inc()
 
     return {
@@ -130,7 +128,7 @@ def predict(data: InputData):
         "latency_ms": round(latency_ms, 2),
         "avg_latency_ms": round(latency_monitor.avg_latency(), 2),
         "p95_latency_ms": round(latency_monitor.p95_latency(), 2),
-        "sla_violated": latency_monitor.sla_violated(),
+        "sla_violated": sla_breached,
         "model_used": model_choice,
     }
 
