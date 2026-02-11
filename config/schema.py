@@ -1,28 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Dict, Literal
 
 
-class LargeModelConfig(BaseModel):
-    type: str
+class ModelConfig(BaseModel):
+    type: Literal["torch", "sklearn"]
     path: str
-    artificial_delay_ms: int = 0
-
-
-class SmallModelConfig(BaseModel):
-    type: str
-    path: str
-
-
-class ModelsConfig(BaseModel):
-    large: LargeModelConfig
-    small: SmallModelConfig
+    artificial_delay_ms: int | None = 0
 
 
 class RoutingConfig(BaseModel):
     strategy: str
     sla_ms: int
     window_size: int
-
+    debug_mode: bool = False
 
 class AppConfig(BaseModel):
-    models: ModelsConfig
+    models: Dict[str, ModelConfig]
     routing: RoutingConfig

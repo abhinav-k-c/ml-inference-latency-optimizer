@@ -12,3 +12,4 @@ routing:
   strategy: sla_based
   sla_ms: 10
   window_size: 50
+  debug_mode: true

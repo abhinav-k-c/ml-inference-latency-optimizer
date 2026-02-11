@@ -20,28 +20,26 @@ from utils.config_loader import load_config
 
 
 # ======================
-# Load + validate config
+# Load typed config
 # ======================
 
 config = load_config()
 
 SLA_MS = config.routing.sla_ms
 WINDOW_SIZE = config.routing.window_size
-MODEL_CONFIG = config.models
+DEBUG_MODE = config.routing.debug_mode
+
+ARTIFICIAL_DELAY_MS = config.models["large"].artificial_delay_ms
 
 
 # ======================
-# Load models (startup)
+# Load models
 # ======================
 
-# Small sklearn model
-small_model = joblib.load(MODEL_CONFIG.small.path)
+small_model = joblib.load(config.models["small"].path)
 
-# Large torch model (architecture only, simulated latency)
 torch_model = RiskNet(input_dim=30)
 torch_model.eval()
-
-ARTIFICIAL_DELAY_MS = MODEL_CONFIG.large.artificial_delay_ms or 0
 
 
 # ======================
@@ -85,7 +83,7 @@ app = FastAPI(title="SLA-Aware ML Inference Service")
 
 
 class InputData(BaseModel):
-    features: list[float]
+    features: list
 
 
 # ======================
@@ -103,7 +101,6 @@ def predict(data: InputData):
     start = time.time()
 
     if model_choice == "large":
-        # Simulate heavy model latency
         if ARTIFICIAL_DELAY_MS > 0:
             time.sleep(ARTIFICIAL_DELAY_MS / 1000)
 
@@ -115,12 +112,10 @@ def predict(data: InputData):
 
     latency_ms = (time.time() - start) * 1000
 
-    # Record metrics
     INFERENCE_LATENCY.observe(latency_ms)
     latency_monitor.record(latency_ms)
 
-    sla_breached = latency_monitor.sla_violated()
-    if sla_breached:
+    if latency_monitor.sla_violated():
         SLA_VIOLATIONS.inc()
 
     return {
@@ -128,13 +123,13 @@ def predict(data: InputData):
         "latency_ms": round(latency_ms, 2),
         "avg_latency_ms": round(latency_monitor.avg_latency(), 2),
         "p95_latency_ms": round(latency_monitor.p95_latency(), 2),
-        "sla_violated": sla_breached,
+        "sla_violated": latency_monitor.sla_violated(),
         "model_used": model_choice,
     }
 
 
 # ======================
-# Prometheus Metrics Endpoint
+# Metrics Endpoint
 # ======================
 
 @app.get("/metrics")
