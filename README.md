@@ -161,17 +161,7 @@ This project showcases:
 • Observability integration (Prometheus)
 • Production-style FastAPI service
 
-🔮 Future Improvements
 
-Add async inference
-
-Add model accuracy tracking
-
-Add Kubernetes deployment
-
-Add autoscaling simulation
-
-Add traffic shaping experiments
 
 👨‍💻 Author
 
