@@ -149,7 +149,7 @@ Example Response:
   "model_used": "small"
 }
 
-📈 What This Project Demonstrates
+📈 What This Project Demonstrates :
 
 This project showcases:
 
